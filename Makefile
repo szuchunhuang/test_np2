@@ -5,3 +5,6 @@ server1:np_simple.cpp
 
 server2:np_single_proc.cpp
 	g++ --std=c++11 np_single_proc.cpp -o np_single_proc
+
+clean:
+	rm np_single_proc np_simple
