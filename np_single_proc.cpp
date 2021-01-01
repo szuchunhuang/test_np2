@@ -520,14 +520,9 @@ int main(int argc, char const *argv[], char* envp[]) {
         unsetenv(*env);
     }
     setenv("PATH", "bin:.", 1);
-    // if (DEBUG) {
-    //     char *env_str = getenv("PATH");
-    //     if (env_str != NULL) {
-    //         cout << "(server side) PATH turn to: " << env_str << endl;
-    //     }
-    // } 
 
     env_size_global = count_env;
+    
     // 複製一份原本的環境變數
     int size_envp = count_env;
     char **ori_envp = new char *[size_envp]; // user_env[id] = new char *[size_envp];
@@ -537,20 +532,8 @@ int main(int argc, char const *argv[], char* envp[]) {
         char *str1 = new char [300];
         strncpy (str1, *env, 300);
         ori_envp[w] = str1;
-        // if (DEBUG) {
-        //     cout << "(ori_envp) ori_envp[w]: " << ori_envp[w] << endl;
-        //     cout << "(ori_envp) str1: " << str1 << endl;
-        // }
         char *env_str_tmp = getenv(str1);
-        if (env_str_tmp != NULL) {
-            ori_envp_variable[w] = env_str_tmp;
-            if (DEBUG) {
-                cout << "(ori_envp) env_str_tmp: " << env_str_tmp<< endl;
-                cout << "(ori_envp) ori_envp_variable[w]: " << ori_envp_variable[w] << endl;
-            }
-        } else {
-            ori_envp_variable[w] = NULL;
-        }
+        ori_envp_variable[w] = env_str_tmp;
         w = w + 1;
     }
 
@@ -559,13 +542,7 @@ int main(int argc, char const *argv[], char* envp[]) {
     FD_ZERO(&activate_fdset);
     FD_SET(server_socket, &activate_fdset);
     while (true) {
-        // if (DEBUG) {
-        //     cout << "enter while head" << endl;
-        // }
         memcpy(&read_fdset, &activate_fdset, sizeof(read_fdset));
-        // if (DEBUG) {
-        //     cout << "finish memcpy" << endl;
-        // }
         if (select(FD_SETSIZE, &read_fdset, NULL, NULL, NULL) < 0) {
             continue;
         }
@@ -590,12 +567,6 @@ int main(int argc, char const *argv[], char* envp[]) {
             tmp_address.append(":");
             tmp_address.append(to_string(client_port));
 
-            // if (DEBUG) {
-            //     cout << "client_ip: " << client_ip << endl;
-            //     cout << "client_port: " << client_port << endl;
-            //     cout << "tmp_address: " << tmp_address << endl;
-            // }
-            
             for (int i = 0; i < MAX_ACCEPT; i++) {
                 if (user_table_flag[i] == 0) {
                     user_table_flag[i] = 1;
@@ -615,22 +586,11 @@ int main(int argc, char const *argv[], char* envp[]) {
                     int z = 0;
                     for (char **env = ori_envp; *env != 0; env++) {
                         char *str2 = new char [300];
+                        char *str3 = new char [300];
                         strncpy (str2, *env, 300);
+                        strncpy (str3, *ori_envp_variable, 300);
                         user_env[i][z] = str2;
-                        // if (DEBUG) {
-                        //     cout << "(client_envp) user_env[i][z]: " << user_env[i][z] << endl;
-                        //     cout << "(client_envp) str1: " << str2 << endl;
-                        // }
-                        char *env_str_tmp_1 = getenv(str2);
-                        if (env_str_tmp_1 != NULL) {
-                            user_env_variable[i][z] = env_str_tmp_1;
-                            if (DEBUG) {
-                                cout << "(client_envp) env_str_tmp: " << env_str_tmp_1 << endl;
-                                cout << "(client_envp) user_env_variable[i][z]: " << user_env_variable[i][z] << endl;
-                            }
-                        } else {
-                            user_env_variable[i][z] = NULL;
-                        }
+                        user_env_variable[i][z] = str3;
                         z = z + 1;
                     }
 
@@ -663,13 +623,14 @@ int main(int argc, char const *argv[], char* envp[]) {
                 
                 //改成這個 client 的環境變數
                 for (int y = 0; y < size_envp; y++) {
-                    char *env_str_tmp_tmp = getenv(user_env[user_idx][y]);
+                    setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
 
-                    if (user_env_variable[user_idx][y] != NULL) {
-                        setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
-                    } else if (env_str_tmp_tmp != NULL) {
-                        unsetenv(user_env[user_idx][y]);
-                    }
+                    // char *env_str_tmp_tmp = getenv(user_env[user_idx][y]);
+                    // if (user_env_variable[user_idx][y] != NULL) {
+                    //     setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
+                    // } else if (env_str_tmp_tmp != NULL) {
+                    //     unsetenv(user_env[user_idx][y]);
+                    // }
                 }
                 
                 dup2(fd, STDIN_FILENO);
@@ -719,28 +680,15 @@ int main(int argc, char const *argv[], char* envp[]) {
 
         //改成 server 的環境變數
         for (int y = 0; y < size_envp; y++) {
-            char *env_str_tmp_tmp_1 = getenv(ori_envp[y]);
-
-            if (ori_envp_variable[y] != NULL) {
-                setenv(ori_envp[y], ori_envp_variable[y], 1);
-                // if (DEBUG) {
-                //     cout << "ori_envp[y]: " << ori_envp[y] << endl;
-                //     cout << "ori_envp_variable[y]: " << ori_envp_variable[y] << endl;
-                // }
-            } else if (env_str_tmp_tmp_1 != NULL) {
-                unsetenv(ori_envp[y]);
-            }
+            setenv(ori_envp[y], ori_envp_variable[y], 1);
+            
+            // char *env_str_tmp_tmp_1 = getenv(ori_envp[y]);
+            // if (ori_envp_variable[y] != NULL) {
+            //     setenv(ori_envp[y], ori_envp_variable[y], 1);
+            // } else if (env_str_tmp_tmp_1 != NULL) {
+            //     unsetenv(ori_envp[y]);
+            // }
         }
-
-        // if (DEBUG) {
-        //     char *env_str = getenv("PATH");
-        //     if (env_str != NULL) {
-        //         cout << "back to server PATH is: " << env_str << endl;
-        //     }
-        // } 
-        if (DEBUG) {
-            cout << "(server) finish checking client select, back to while head" << endl;
-        } 
     }
     return 0;
 }
