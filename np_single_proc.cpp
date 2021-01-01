@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <map>
+#include <unordered_set>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -98,6 +99,7 @@ void broadcast (int client_socket, string line) {
     string belong_socket;
     string temp;
     string msg;
+    string output_string;
     char delim = ' ';
     stringstream s(line);
     getline(s, temp, delim);
@@ -133,22 +135,20 @@ void broadcast (int client_socket, string line) {
             for (int k = 0; k < MAX_ACCEPT; k++) {
                 if (user_table_flag[k] == 1) {
                     tmp_fd = stoi(user_table[k][4]);
-                    dup2(tmp_fd, STDOUT_FILENO);
-                    cout << "*** User '" << username << "' entered from " << ip_port << ". ***" << endl;
+                    output_string = "*** User '" + username + "' entered from " + ip_port + ". ***";
+                    write(tmp_fd, &output_string, output_string.size());
                 }
             }
-            dup2(client_socket, STDOUT_FILENO);
             break;
 
         case 2: //logout
             for (int k = 0; k < MAX_ACCEPT; k++) {
                 if (user_table_flag[k] == 1 && user_table[k][2].compare(username) != 0) {
                     tmp_fd = stoi(user_table[k][4]);
-                    dup2(tmp_fd, STDOUT_FILENO);
-                    cout << "*** User '" << username << "' left. ***" << endl;
+                    output_string = "*** User '" + username + "' left. ***";
+                    write(tmp_fd, &output_string, output_string.size());
                 }            
             }
-            dup2(client_socket, STDOUT_FILENO);
             break;
         
         case 3: //who
@@ -182,11 +182,10 @@ void broadcast (int client_socket, string line) {
                 for (int k = 0; k < MAX_ACCEPT; k++) {
                     if (user_table_flag[k] == 1) {
                         tmp_fd = stoi(user_table[k][4]);
-                        dup2(tmp_fd, STDOUT_FILENO);
-                        cout << "*** User from " << ip_port << " is named '" << username << "'. ***" << endl;
+                        output_string = "*** User from " + ip_port + " is named '" + username + "'. ***";
+                        write(tmp_fd, &output_string, output_string.size());
                     }
                 }
-                dup2(client_socket, STDOUT_FILENO);
             }
             break;
         
@@ -211,10 +210,9 @@ void broadcast (int client_socket, string line) {
                 }
                 if (block_flag == 0) {
                     tmp_fd = stoi(user_table[tmp_id - 1][4]);
-                    dup2(tmp_fd, STDOUT_FILENO);
-                    cout << "*** " << username << " told you ***: " << msg << endl;
+                    output_string = "*** " + username + " told you ***: " + msg;
+                    write(tmp_fd, &output_string, output_string.size());
                 }
-                dup2(client_socket, STDOUT_FILENO);
 
             } else {
                 cout << "*** Error: user #" << rec_id << " does not exist yet. ***" << endl;
@@ -240,12 +238,11 @@ void broadcast (int client_socket, string line) {
                     }
 
                     if (block_flag == 0) {
-                        dup2(tmp_fd, STDOUT_FILENO);
-                        cout << "*** " << username << " yelled ***: " << msg << endl;
+                        output_string =  "*** " + username + " yelled ***: " + msg;
+                        write(tmp_fd, &output_string, output_string.size());
                     }
                 }      
             }
-            dup2(client_socket, STDOUT_FILENO);
             break;
 
         case 7: //block 
@@ -308,11 +305,10 @@ void broadcast (int client_socket, string line) {
                         for (int k = 0; k < MAX_ACCEPT; k++) {
                             if (user_table_flag[k] == 1) {
                                 tmp_fd = stoi(user_table[k][4]);
-                                dup2(tmp_fd, STDOUT_FILENO);
-                                cout << "*** " << username << " (#" << client_id << ") just received from " << send_name << " (#" << send_id << ") by '" << new_line << "' ***" << endl;
+                                output_string = "*** " + username + " (#" + client_id + ") just received from " + send_name + " (#" + send_id + ") by '" + new_line + "' ***";
+                                write(tmp_fd, &output_string, output_string.size());
                             }
                         }
-                        dup2(client_socket, STDOUT_FILENO);
 
                     } else {
                         cout << "*** Error: the pipe #" << send_id << "->#" << client_id << " does not exist yet. ***" << endl;
@@ -376,11 +372,10 @@ void broadcast (int client_socket, string line) {
                         for (int k = 0; k < MAX_ACCEPT; k++) {
                             if (user_table_flag[k] == 1) {
                                 tmp_fd = stoi(user_table[k][4]);
-                                dup2(tmp_fd, STDOUT_FILENO);
-                                cout << "*** " << username << " (#" << client_id << ") just piped '" << line << "' to " << rec_name << " (#" << rec_id << ") ***" << endl;
+                                output_string = "*** " + username + " (#" + client_id + ") just piped '" + line + "' to " + rec_name + " (#" + rec_id + ") ***";
+                                write(tmp_fd, &output_string, output_string.size());
                             }
                         }
-                        dup2(client_socket, STDOUT_FILENO);
                     }
                         
                 } else { // user doesn't exist
@@ -462,6 +457,22 @@ int echo(int current_socket) {
     }
     cout << "% " << flush;
 	return char_sum;
+}
+
+void update_env(char **des_env_k, char **des_env_v,char **src_env_k){
+    unordered_set<string> env_set;
+    int i = 0;
+    for(char **env = des_env_k; *env != 0; env++){
+        env_set.insert(*env);
+        setenv(*env, des_env_v[i], 1);
+        i++;
+    }
+    i = 0;
+    for(char **env = src_env_k; *env != 0; env++){
+        if (env_set.find(*env) == env_set.end()){
+            unsetenv(*env);
+        }
+    }
 }
 
 int server_socket_TCP(const char *port, int qlen){
@@ -549,6 +560,7 @@ int main(int argc, char const *argv[], char* envp[]) {
         if (DEBUG) {
             cout << "finish select" << endl;
         }
+        // Handle connect
         if (FD_ISSET(server_socket, &read_fdset)) { // check if it is the server socket receiving message (means: someone wants to connect)
                                                     // skip processing user out of range: user_count < MAX_USER
             alen = sizeof(fsin);
@@ -605,12 +617,13 @@ int main(int argc, char const *argv[], char* envp[]) {
             broadcast(client_socket, "login");
             cout << "% " << flush;
         }
+        // Handle read
         for (int fd = 0; fd < FD_SETSIZE; fd++) {
             // if (DEBUG) {
             //     cout << "input signal comes from client!" << endl;
             // }  
+            int user_idx;
             if (fd != server_socket && FD_ISSET(fd, &read_fdset)) {
-                int user_idx;
                 for (int i = 0; i < MAX_ACCEPT; i++) {
                     if (user_table_flag[i] == 1 && (user_table[i][4].compare(to_string(fd))) == 0) {
                         if (DEBUG) {
@@ -622,16 +635,17 @@ int main(int argc, char const *argv[], char* envp[]) {
                 }
                 
                 //改成這個 client 的環境變數
-                for (int y = 0; y < size_envp; y++) {
-                    setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
+                update_env(user_env[user_idx], user_env_variable[user_idx], ori_envp);
+                // for (int y = 0; y < size_envp; y++) {
+                //     setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
 
-                    // char *env_str_tmp_tmp = getenv(user_env[user_idx][y]);
-                    // if (user_env_variable[user_idx][y] != NULL) {
-                    //     setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
-                    // } else if (env_str_tmp_tmp != NULL) {
-                    //     unsetenv(user_env[user_idx][y]);
-                    // }
-                }
+                //     // char *env_str_tmp_tmp = getenv(user_env[user_idx][y]);
+                //     // if (user_env_variable[user_idx][y] != NULL) {
+                //     //     setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
+                //     // } else if (env_str_tmp_tmp != NULL) {
+                //     //     unsetenv(user_env[user_idx][y]);
+                //     // }
+                // }
                 
                 dup2(fd, STDIN_FILENO);
                 dup2(fd, STDOUT_FILENO);
@@ -672,23 +686,26 @@ int main(int argc, char const *argv[], char* envp[]) {
                         }
                     }
                 } 
+                //改成 server 的環境變數
+                update_env(ori_envp, ori_envp_variable, user_env[user_idx]);
             }
         }
         dup2(ori_stdin, STDIN_FILENO);
         dup2(ori_stdout, STDOUT_FILENO);
         dup2(ori_stderr, STDERR_FILENO);
 
-        //改成 server 的環境變數
-        for (int y = 0; y < size_envp; y++) {
-            setenv(ori_envp[y], ori_envp_variable[y], 1);
+        // //改成 server 的環境變數
+        // for (int y = 0; y < size_envp; y++) {
+        //     setenv(ori_envp[y], ori_envp_variable[y], 1);
             
-            // char *env_str_tmp_tmp_1 = getenv(ori_envp[y]);
-            // if (ori_envp_variable[y] != NULL) {
-            //     setenv(ori_envp[y], ori_envp_variable[y], 1);
-            // } else if (env_str_tmp_tmp_1 != NULL) {
-            //     unsetenv(ori_envp[y]);
-            // }
-        }
+        //     // char *env_str_tmp_tmp_1 = getenv(ori_envp[y]);
+        //     // if (ori_envp_variable[y] != NULL) {
+        //     //     setenv(ori_envp[y], ori_envp_variable[y], 1);
+        //     // } else if (env_str_tmp_tmp_1 != NULL) {
+        //     //     unsetenv(ori_envp[y]);
+        //     // }
+        // }
+        
     }
     return 0;
 }
