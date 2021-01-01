@@ -48,6 +48,25 @@ string user_pipe_command[MAX_ACCEPT] = {"0"};
 //                                         //   fd_R  |  fd_w   |   sender_socket   |    receiver_socket  |     flag
 //                                         //   int   |   int   |       int         |         int         |    0 or 1
 
+void process_logout_pipe(int fd_read){
+    pid_t pid;
+    int status;
+
+    while ((pid = fork()) < 0) {
+        waitpid(-1, &status, 0);
+    }
+    if (pid == 0) {
+        string tmp_string;
+        dup2(fd_read, STDIN_FILENO);
+        dup2(devNull, STDOUT_FILENO);
+        while (getline(cin, tmp_string)){
+            cout << tmp_string;
+        }
+        exit(0);
+    } else {
+        close(fd_read); 
+    }
+}
 void welcome_message() {
     cout << "****************************************" << endl;
     cout << "** Welcome to the information server. **" << endl;
@@ -648,10 +667,6 @@ int main(int argc, char const *argv[], char* envp[]) {
 
                     if (user_env_variable[user_idx][y] != NULL) {
                         setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
-                        // if (DEBUG) {
-                        //     cout << "user_env[user_idx][y]: " << user_env[user_idx][y] << endl;
-                        //     cout << "user_env_variable[user_idx][y]: " << user_env_variable[user_idx][y] << endl;
-                        // }
                     } else if (env_str_tmp_tmp != NULL) {
                         unsetenv(user_env[user_idx][y]);
                     }
@@ -660,39 +675,28 @@ int main(int argc, char const *argv[], char* envp[]) {
                 dup2(fd, STDIN_FILENO);
                 dup2(fd, STDOUT_FILENO);
                 dup2(fd, STDERR_FILENO);
-
-                // if (DEBUG) {
-                //     char *env_str_1 = getenv("PATH");
-                //     if (env_str_1 != NULL) {
-                //         cout << "switch to client, PATH is: " << env_str_1 << endl;
-                //     }
-                // } 
+ 
                 if (echo(fd) == -1) { // exec np_shell and handle logout
                     broadcast(fd, "logout");
                     close(fd);
                     FD_CLR(fd, &activate_fdset);
                     
-                    for (int k = 0; k < MAX_PIPE; k++) {
-                        if ((num_pipe_table[k][3] == 1 && num_pipe_table[k][4] == fd) || 
-                            (num_pipe_table[k][3] > 1 && num_pipe_table[k][4] == fd) || 
-                            (num_pipe_table[k][3] == fd)) {
-                            close(num_pipe_table[k][1]);
-                            num_pipe_table[k][3] = 0;
+                    for (int k = 0; k < MAX_PIPE; k++) { //user pipe 多餘的資料尚未輸入完畢
+                        if (user_pipe_table[k][4] == 1) {
+                            if (user_pipe_table[k][2] == fd || user_pipe_table[k][3] == fd) { 
+                                close(user_pipe_table[k][1]);
+                                process_logout_pipe(user_pipe_table[k][0]);
+                                user_pipe_table[k][4] = 0;
+                            }
+                        }
+                    
+                    }
 
-                            while ((pid = fork()) < 0) {
-                                waitpid(-1, &status, 0);
-                            }
-                            if (pid == 0) {
-                                string tmp_string;
-                                dup2(num_pipe_table[k][0], STDIN_FILENO);
-                                dup2(devNull, STDOUT_FILENO);
-                                while (getline(cin, tmp_string)){
-                                    cout << tmp_string;
-                                }
-                                exit(0);
-                            } else {
-                                close(num_pipe_table[k][0]); 
-                            }
+                    for (int k = 0; k < MAX_PIPE; k++) { //num pipe 多餘的資料尚未輸入完畢
+                        if (num_pipe_table[k][3] == 1 && num_pipe_table[k][4] == fd) {
+                            close(num_pipe_table[k][1]);
+                            process_logout_pipe(num_pipe_table[k][0]);
+                            num_pipe_table[k][3] = 0;
                         }
                     }
 
@@ -706,10 +710,7 @@ int main(int argc, char const *argv[], char* envp[]) {
                             break;
                         }
                     }
-                }
-                // if (DEBUG) {
-                //     cout << "finish this turn of fd echo" << endl;
-                // }   
+                } 
             }
         }
         dup2(ori_stdin, STDIN_FILENO);
