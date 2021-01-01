@@ -635,17 +635,17 @@ int main(int argc, char const *argv[], char* envp[]) {
                 }
                 
                 //改成這個 client 的環境變數
-                update_env(user_env[user_idx], user_env_variable[user_idx], ori_envp);
-                // for (int y = 0; y < size_envp; y++) {
-                //     setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
+                // update_env(user_env[user_idx], user_env_variable[user_idx], ori_envp);
+                for (int y = 0; y < size_envp; y++) {
+                    // setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
 
-                //     // char *env_str_tmp_tmp = getenv(user_env[user_idx][y]);
-                //     // if (user_env_variable[user_idx][y] != NULL) {
-                //     //     setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
-                //     // } else if (env_str_tmp_tmp != NULL) {
-                //     //     unsetenv(user_env[user_idx][y]);
-                //     // }
-                // }
+                    char *env_str_tmp_tmp = getenv(user_env[user_idx][y]);
+                    if (user_env_variable[user_idx][y] != NULL) {
+                        setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
+                    } else if (env_str_tmp_tmp != NULL) {
+                        unsetenv(user_env[user_idx][y]);
+                    }
+                }
                 
                 dup2(fd, STDIN_FILENO);
                 dup2(fd, STDOUT_FILENO);
@@ -687,7 +687,7 @@ int main(int argc, char const *argv[], char* envp[]) {
                     }
                 } 
                 //改成 server 的環境變數
-                update_env(ori_envp, ori_envp_variable, user_env[user_idx]);
+                // update_env(ori_envp, ori_envp_variable, user_env[user_idx]);
             }
         }
         dup2(ori_stdin, STDIN_FILENO);
@@ -695,16 +695,16 @@ int main(int argc, char const *argv[], char* envp[]) {
         dup2(ori_stderr, STDERR_FILENO);
 
         // //改成 server 的環境變數
-        // for (int y = 0; y < size_envp; y++) {
-        //     setenv(ori_envp[y], ori_envp_variable[y], 1);
+        for (int y = 0; y < size_envp; y++) {
+            // setenv(ori_envp[y], ori_envp_variable[y], 1);
             
-        //     // char *env_str_tmp_tmp_1 = getenv(ori_envp[y]);
-        //     // if (ori_envp_variable[y] != NULL) {
-        //     //     setenv(ori_envp[y], ori_envp_variable[y], 1);
-        //     // } else if (env_str_tmp_tmp_1 != NULL) {
-        //     //     unsetenv(ori_envp[y]);
-        //     // }
-        // }
+            char *env_str_tmp_tmp_1 = getenv(ori_envp[y]);
+            if (ori_envp_variable[y] != NULL) {
+                setenv(ori_envp[y], ori_envp_variable[y], 1);
+            } else if (env_str_tmp_tmp_1 != NULL) {
+                unsetenv(ori_envp[y]);
+            }
+        }
         
     }
     return 0;
