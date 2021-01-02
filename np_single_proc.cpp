@@ -33,6 +33,7 @@
 
 
 using namespace std;
+// vector<array<string, 3>> env_vari; // belong_usr_id, key, value
 int block_user[30][30] = {0};  //index 填 idx; 裡面存 ID
 // char **user_env[30];
 // char **user_env_variable[30];
@@ -74,7 +75,7 @@ void welcome_message() {
     cout << "****************************************" << endl;
 }
 
-void broadcast (int client_socket, string line) { 
+int broadcast (int client_socket, string line) { 
     int tmp_fd;
     int tmp_id;
     int client_idx;
@@ -135,8 +136,8 @@ void broadcast (int client_socket, string line) {
             for (int k = 0; k < MAX_ACCEPT; k++) {
                 if (user_table_flag[k] == 1) {
                     tmp_fd = stoi(user_table[k][4]);
-                    output_string = "*** User '" + username + "' entered from " + ip_port + ". ***";
-                    write(tmp_fd, &output_string, output_string.size());
+                    output_string = "*** User '" + username + "' entered from " + ip_port + ". ***" + "\n";
+                    write(tmp_fd, output_string.c_str(), output_string.size());
                 }
             }
             break;
@@ -145,8 +146,8 @@ void broadcast (int client_socket, string line) {
             for (int k = 0; k < MAX_ACCEPT; k++) {
                 if (user_table_flag[k] == 1 && user_table[k][2].compare(username) != 0) {
                     tmp_fd = stoi(user_table[k][4]);
-                    output_string = "*** User '" + username + "' left. ***";
-                    write(tmp_fd, &output_string, output_string.size());
+                    output_string = "*** User '" + username + "' left. ***" + "\n";
+                    write(tmp_fd, output_string.c_str(), output_string.size());
                 }            
             }
             break;
@@ -182,8 +183,8 @@ void broadcast (int client_socket, string line) {
                 for (int k = 0; k < MAX_ACCEPT; k++) {
                     if (user_table_flag[k] == 1) {
                         tmp_fd = stoi(user_table[k][4]);
-                        output_string = "*** User from " + ip_port + " is named '" + username + "'. ***";
-                        write(tmp_fd, &output_string, output_string.size());
+                        output_string = "*** User from " + ip_port + " is named '" + username + "'. ***" + "\n";
+                        write(tmp_fd, output_string.c_str(), output_string.size());
                     }
                 }
             }
@@ -210,8 +211,8 @@ void broadcast (int client_socket, string line) {
                 }
                 if (block_flag == 0) {
                     tmp_fd = stoi(user_table[tmp_id - 1][4]);
-                    output_string = "*** " + username + " told you ***: " + msg;
-                    write(tmp_fd, &output_string, output_string.size());
+                    output_string = "*** " + username + " told you ***: " + msg + "\n";
+                    write(tmp_fd, output_string.c_str(), output_string.size());
                 }
 
             } else {
@@ -238,8 +239,8 @@ void broadcast (int client_socket, string line) {
                     }
 
                     if (block_flag == 0) {
-                        output_string =  "*** " + username + " yelled ***: " + msg;
-                        write(tmp_fd, &output_string, output_string.size());
+                        output_string =  "*** " + username + " yelled ***: " + msg + "\n";
+                        write(tmp_fd, output_string.c_str(), output_string.size());
                     }
                 }      
             }
@@ -305,16 +306,18 @@ void broadcast (int client_socket, string line) {
                         for (int k = 0; k < MAX_ACCEPT; k++) {
                             if (user_table_flag[k] == 1) {
                                 tmp_fd = stoi(user_table[k][4]);
-                                output_string = "*** " + username + " (#" + client_id + ") just received from " + send_name + " (#" + send_id + ") by '" + new_line + "' ***";
-                                write(tmp_fd, &output_string, output_string.size());
+                                output_string = "*** " + username + " (#" + client_id + ") just received from " + send_name + " (#" + send_id + ") by '" + new_line + "' ***" + "\n";
+                                write(tmp_fd, output_string.c_str(), output_string.size());
                             }
                         }
 
                     } else {
                         cout << "*** Error: the pipe #" << send_id << "->#" << client_id << " does not exist yet. ***" << endl;
+                        return 1;
                     }
                 } else { // user doesn't exist
                     cout << "*** Error: user #" << send_id <<" does not exist yet. ***" << endl;
+                    return 1;
                 } 
             }
 
@@ -349,6 +352,7 @@ void broadcast (int client_socket, string line) {
                     }
                     if (flag_1 == 1) {
                         cout << "*** Error: the pipe #" << client_id << "->#" << rec_id << " already exists. ***" << endl;
+                        return 1;
                     } else {
                         user_pipe_command[stoi(client_id) - 1] = line;  
                         while (pipe(fds) < 0) {
@@ -372,18 +376,20 @@ void broadcast (int client_socket, string line) {
                         for (int k = 0; k < MAX_ACCEPT; k++) {
                             if (user_table_flag[k] == 1) {
                                 tmp_fd = stoi(user_table[k][4]);
-                                output_string = "*** " + username + " (#" + client_id + ") just piped '" + line + "' to " + rec_name + " (#" + rec_id + ") ***";
-                                write(tmp_fd, &output_string, output_string.size());
+                                output_string = "*** " + username + " (#" + client_id + ") just piped '" + line + "' to " + rec_name + " (#" + rec_id + ") ***" + "\n";
+                                write(tmp_fd, output_string.c_str(), output_string.size());
                             }
                         }
                     }
                         
                 } else { // user doesn't exist
                     cout << "*** Error: user #" << rec_id <<" does not exist yet. ***" << endl;
+                    return 1;
                 }
             }           
             break;
     }
+    return 0;
 }
 
 int echo(int current_socket) {
@@ -440,20 +446,19 @@ int echo(int current_socket) {
     } else { 
         size_t tmp_pos_1;
         size_t tmp_pos_2;
+        int wrong_flag_1 = 0;
+        int wrong_flag_2 = 0;
         tmp_pos_1 = command.find('>'); 
         tmp_pos_2 = command.find('<');
         if (tmp_pos_1 != string::npos && command[tmp_pos_1 + 1] != ' ') { // separate from output to file
-            broadcast(current_socket, command);
+            wrong_flag_1 = broadcast(current_socket, command);
         } else if (tmp_pos_2 != string::npos) {
-            broadcast(current_socket, command);
+            wrong_flag_2 = broadcast(current_socket, command);
         }
-        if (DEBUG) {
-            cout << "about to enter npshell" << endl;
+        if (wrong_flag_1 != 1 && wrong_flag_2 != 1) {
+            np_shell(current_socket, command);
         }
-        np_shell(current_socket, command);
-        if (DEBUG) {
-            cout << "leave npshell" << endl;
-        }
+       
     }
     cout << "% " << flush;
 	return char_sum;
@@ -532,21 +537,39 @@ int main(int argc, char const *argv[], char* envp[]) {
     }
     setenv("PATH", "bin:.", 1);
 
-    env_size_global = count_env;
     
-    // 複製一份原本的環境變數
-    int size_envp = count_env;
-    char **ori_envp = new char *[size_envp]; // user_env[id] = new char *[size_envp];
-    char **ori_envp_variable = new char *[size_envp];
-    int w = 0;
-    for (char **env = envp; *env != 0; env++) {
-        char *str1 = new char [300];
-        strncpy (str1, *env, 300);
-        ori_envp[w] = str1;
-        char *env_str_tmp = getenv(str1);
-        ori_envp_variable[w] = env_str_tmp;
-        w = w + 1;
-    }
+    // 複製一份原本的環境變數 //TODO
+    env_vari.push_back(array<string, 3>({"0", "PATH", "bin:."}));
+
+
+    // count_env = 50;
+    // env_size_global = count_env;
+    // int size_envp = count_env;
+    // char **ori_envp = new char *[size_envp]; // user_env[id] = new char *[size_envp];
+    // char **ori_envp_variable = new char *[size_envp];
+    
+    // ori_envp[0] = "PATH";
+    // ori_envp_variable[0] = "bin:.";
+    // int w = 0;
+    // for (char **env = envp; *env != 0; env++) {
+    //     char *str1 = new char [300];
+    //     strncpy (str1, *env, 300);
+    //     ori_envp[w] = str1;
+    //     char *env_str_tmp = getenv(str1);
+    //     ori_envp_variable[w] = env_str_tmp;
+    //     w = w + 1;
+    // }
+
+    // if (DEBUG) {
+    //     cout << "ori env" << endl;
+    //     for (int j = 0; j < size_envp; j++){
+    //         if (ori_envp[j] != NULL) {
+    //             cout << j << "-" << ori_envp[j] << ":" << ori_envp_variable[j] << endl;
+    //         }
+    //         // cout << ori_envp[j] << ":" << ori_envp_variable[j] << endl;
+    //     }
+    // }
+
 
     server_socket = server_socket_TCP(port.c_str(), MAX_ACCEPT);
     // int number_of_fdset = getdtablesize(); 
@@ -560,6 +583,8 @@ int main(int argc, char const *argv[], char* envp[]) {
         if (DEBUG) {
             cout << "finish select" << endl;
         }
+
+
         // Handle connect
         if (FD_ISSET(server_socket, &read_fdset)) { // check if it is the server socket receiving message (means: someone wants to connect)
                                                     // skip processing user out of range: user_count < MAX_USER
@@ -591,20 +616,31 @@ int main(int argc, char const *argv[], char* envp[]) {
                         cout << "user_table[i][3] (address+port): " << user_table[i][3] << endl;
                         cout << "user_table[i][4] (client_socket): " << user_table[i][4] << endl;
                     }
+                    
+                    // 要複製 ori_envp 的資料//TODO
+                    env_vari.push_back(array<string, 3>({user_table[i][1], "PATH", "bin:."}));
 
-                    // 要複製 ori_envp 的資料
-                    user_env[i] = new char *[size_envp]; // user_env[id] = new char *[size_envp];
-                    user_env_variable[i] = new char *[size_envp];
-                    int z = 0;
-                    for (char **env = ori_envp; *env != 0; env++) {
-                        char *str2 = new char [300];
-                        char *str3 = new char [300];
-                        strncpy (str2, *env, 300);
-                        strncpy (str3, *ori_envp_variable, 300);
-                        user_env[i][z] = str2;
-                        user_env_variable[i][z] = str3;
-                        z = z + 1;
-                    }
+                    // user_env[i] = new char *[size_envp]; // user_env[id] = new char *[size_envp];
+                    // user_env_variable[i] = new char *[size_envp];
+                    // int z = 0;
+                    // for (char **env = ori_envp; *env != 0; env++) {
+                    //     char *str2 = new char [300];
+                    //     char *str3 = new char [300];
+                    //     strncpy (str2, *env, 300);
+                    //     strncpy (str3, *ori_envp_variable, 300);
+                    //     user_env[i][z] = str2;
+                    //     user_env_variable[i][z] = str3;
+                    //     z = z + 1;
+                    // }
+
+                    // if (DEBUG) {
+                    //     cout << "current env:::" << i << endl;
+                    //     for (int j = 0; j < size_envp; j++){
+                    //         if (user_env[i][j] != NULL) {
+                    //             cout << user_env[i][j] << ":" << user_env_variable[i][j] << endl;
+                    //         }
+                    //     }
+                    // }
 
                     break;
                 }
@@ -619,9 +655,6 @@ int main(int argc, char const *argv[], char* envp[]) {
         }
         // Handle read
         for (int fd = 0; fd < FD_SETSIZE; fd++) {
-            // if (DEBUG) {
-            //     cout << "input signal comes from client!" << endl;
-            // }  
             int user_idx;
             if (fd != server_socket && FD_ISSET(fd, &read_fdset)) {
                 for (int i = 0; i < MAX_ACCEPT; i++) {
@@ -634,24 +667,40 @@ int main(int argc, char const *argv[], char* envp[]) {
                     }
                 }
                 
-                //改成這個 client 的環境變數
-                // update_env(user_env[user_idx], user_env_variable[user_idx], ori_envp);
-                for (int y = 0; y < size_envp; y++) {
-                    // setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
-
-                    char *env_str_tmp_tmp = getenv(user_env[user_idx][y]);
-                    if (user_env_variable[user_idx][y] != NULL) {
-                        setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
-                    } else if (env_str_tmp_tmp != NULL) {
-                        unsetenv(user_env[user_idx][y]);
+                //改成這個 client 的環境變數 //TODO
+                for (unsigned int i = 0; i < env_vari.size(); i++) {
+                    if (env_vari[i][0] == user_table[user_idx][1]) {
+                        setenv(env_vari[i][1].c_str(), env_vari[i][2].c_str(), 1);
                     }
                 }
+                
+
+                // update_env(user_env[user_idx], user_env_variable[user_idx], ori_envp);
+                // if (DEBUG) {
+                //     cout << "(READ)current env:::" << user_idx << endl;
+                //     for (int j = 0; j < size_envp; j++){
+                //         if (user_env[user_idx][j] != NULL) {
+                //             cout << user_env[user_idx][j] << ":" << user_env_variable[user_idx][j] << endl;
+                //         }
+                //     }
+                // }
+                // for (int y = 0; y < size_envp; y++) {
+                //     // setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
+
+                //     char *env_str_tmp_tmp = getenv(user_env[user_idx][y]);
+                //     if (user_env_variable[user_idx][y] != NULL) {
+                //         setenv(user_env[user_idx][y], user_env_variable[user_idx][y], 1);
+                //     } else if (env_str_tmp_tmp != NULL) {
+                //         unsetenv(user_env[user_idx][y]);
+                //     }
+                // }
                 
                 dup2(fd, STDIN_FILENO);
                 dup2(fd, STDOUT_FILENO);
                 dup2(fd, STDERR_FILENO);
  
                 if (echo(fd) == -1) { // exec np_shell and handle logout
+                    cout << "start logout" << endl;
                     broadcast(fd, "logout");
                     close(fd);
                     FD_CLR(fd, &activate_fdset);
@@ -675,7 +724,7 @@ int main(int argc, char const *argv[], char* envp[]) {
                         }
                     }
 
-                    for (int i = 0; i < MAX_ACCEPT; i++) {
+                    for (int i = 0; i < MAX_ACCEPT; i++) { //TODO: 清空使用者表
                         if ((user_table[i][4].compare(to_string(fd))) == 0) {
                             user_table_flag[i] = 0;
                             int delete_idx = i;
@@ -685,26 +734,62 @@ int main(int argc, char const *argv[], char* envp[]) {
                             break;
                         }
                     }
+
+                    //TODO: 先 unset 再清空環境變數 vector 資料
+                    for (unsigned int i = 0; i < env_vari.size(); i++) {
+                        if (env_vari[i][0] == user_table[user_idx][1]) {
+                            unsetenv(env_vari[i][1].c_str());
+                        }
+                    }
+                    for (unsigned int i = 0; i < env_vari.size(); i++) {
+                        if (env_vari[i][0] == user_table[user_idx][1]) {
+                            env_vari.erase(env_vari.begin() + i);
+                        }
+                    }
+                    continue;
+
                 } 
-                //改成 server 的環境變數
+
+                //TODO: 全部設為 NULL，client 每個重新設定
+                for (unsigned int i = 0; i < env_vari.size(); i++) {
+                    if (env_vari[i][0] == user_table[user_idx][1]) {
+                        unsetenv(env_vari[i][1].c_str());
+                    }
+                }
+                // cout << "Update to server env" << endl;
                 // update_env(ori_envp, ori_envp_variable, user_env[user_idx]);
+                // if (DEBUG) {
+                //     cout << "ori env_--" << endl;
+                //     for (int j = 0; j < size_envp; j++){
+                //         if (ori_envp[j] != NULL) {
+                //             cout << j << "-" << ori_envp[j] << ":" << ori_envp_variable[j] << endl;
+                //         }
+                //         // cout << ori_envp[j] << ":" << ori_envp_variable[j] << endl;
+                //     }
+                // }
             }
         }
         dup2(ori_stdin, STDIN_FILENO);
         dup2(ori_stdout, STDOUT_FILENO);
         dup2(ori_stderr, STDERR_FILENO);
 
-        // //改成 server 的環境變數
-        for (int y = 0; y < size_envp; y++) {
-            // setenv(ori_envp[y], ori_envp_variable[y], 1);
-            
-            char *env_str_tmp_tmp_1 = getenv(ori_envp[y]);
-            if (ori_envp_variable[y] != NULL) {
-                setenv(ori_envp[y], ori_envp_variable[y], 1);
-            } else if (env_str_tmp_tmp_1 != NULL) {
-                unsetenv(ori_envp[y]);
+        // //改成 server 的環境變數 //TODO: 這邊再換成 server 的
+        for (unsigned int i = 0; i < env_vari.size(); i++) {
+            if (env_vari[i][0] == "0") {
+                setenv(env_vari[i][1].c_str(), env_vari[i][2].c_str(), 1);
             }
         }
+
+        // for (int y = 0; y < size_envp; y++) {
+        //     // setenv(ori_envp[y], ori_envp_variable[y], 1);
+            
+        //     char *env_str_tmp_tmp_1 = getenv(ori_envp[y]);
+        //     if (ori_envp_variable[y] != NULL) {
+        //         setenv(ori_envp[y], ori_envp_variable[y], 1);
+        //     } else if (env_str_tmp_tmp_1 != NULL) {
+        //         unsetenv(ori_envp[y]);
+        //     }
+        // }
         
     }
     return 0;

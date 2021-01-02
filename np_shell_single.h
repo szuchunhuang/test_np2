@@ -34,6 +34,7 @@ int env_size_global = 0;
 int devNull = open("/dev/null", O_WRONLY);
 int num_empty_index = 0;
 int userpipe_num_empty_index = 0;
+vector<array<string, 3>> env_vari; // belong_usr_id, key, value
 string user_table[MAX_ACCEPT][5] = {"0"}; // [0]  | [1] |  [2] |   [3]        |      [4] 
                                           // flag |  ID | name | address:port | belong_socket
 int user_table_flag[MAX_ACCEPT] = {0}; // replace user_table[][0];
@@ -257,7 +258,7 @@ int np_shell(int current_socket, string line) { //np_shell() return 1 is logout!
                 cout << env_str << endl;
             }
             return 0;
-        } else if (command[0].find("setenv") != string::npos) {
+        } else if (command[0].find("setenv") != string::npos) { //TODO
             stringstream s(command[0]);
             string tmp1;
             string tmp2;
@@ -267,7 +268,6 @@ int np_shell(int current_socket, string line) { //np_shell() return 1 is logout!
             getline(s, tmp2, delim);
             setenv(tmp1.c_str(), tmp2.c_str(), 1);
             
-            
             int tmp_idx;
             for (int i = 0; i < MAX_ACCEPT; i++) {
                 if (user_table_flag[i] == 1 && (user_table[i][4].compare(to_string(current_socket))) == 0) {
@@ -275,29 +275,34 @@ int np_shell(int current_socket, string line) { //np_shell() return 1 is logout!
                     break;
                 }
             }
-            for (int y = 0; y < env_size_global; y++) {
-                char *tmp_str = user_env[tmp_idx][y];
-                char *copy_str = new char [300];
-                if (strcmp(tmp_str, tmp1.c_str()) == 0) { 
-                    // strncpy(copy_str, tmp2.c_str(), 300);
-                    copy_str = getenv(tmp1.c_str());
-                    if (copy_str != NULL) {
-                        user_env_variable[tmp_idx][y] = copy_str;
-                    } else {
-                        user_env_variable[tmp_idx][y] = NULL;
-                    }
-                    if (DEBUG) {
-                        cout << "copy_str: " << copy_str << endl;
-                        cout << "user_env_variable[tmp_idx][y]: " << user_env_variable[tmp_idx][y] << endl;
-                        cout << "tmp1: " << tmp1 << "tmp2: " << tmp2 << endl;
-                        char *aa = getenv(tmp1.c_str());
-                        if (aa != NULL) {
-                            cout << "npshell setenv, table update by getenv(tmp1): " << aa << endl;
-                        }
-                    }
-                }
+            env_vari.push_back(array<string, 3>({user_table[tmp_idx][1], tmp1, tmp2}));
+
+            // for (int y = 0; y < env_size_global; y++) {
+            //     char *tmp_str = user_env[tmp_idx][y];
+            //     // if(tmp_str == NULL){
+            //     //     continue;
+            //     // }
+            //     char *copy_str = new char [300];
+            //     if (strcmp(tmp_str, tmp1.c_str()) == 0) { 
+            //         // strncpy(copy_str, tmp2.c_str(), 300);
+            //         copy_str = getenv(tmp1.c_str());
+            //         if (copy_str != NULL) {
+            //             user_env_variable[tmp_idx][y] = copy_str;
+            //         } else {
+            //             user_env_variable[tmp_idx][y] = NULL;
+            //         }
+            //         if (DEBUG) {
+            //             cout << "copy_str: " << copy_str << endl;
+            //             cout << "user_env_variable[tmp_idx][y]: " << user_env_variable[tmp_idx][y] << endl;
+            //             cout << "tmp1: " << tmp1 << "tmp2: " << tmp2 << endl;
+            //             char *aa = getenv(tmp1.c_str());
+            //             if (aa != NULL) {
+            //                 cout << "npshell setenv, table update by getenv(tmp1): " << aa << endl;
+            //             }
+            //         }
+            //     }
                 
-            }
+            // }
             return 0;
         } 
         // else if (command[0].find("exit") != string::npos) {
